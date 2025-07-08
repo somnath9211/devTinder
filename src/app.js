@@ -4,6 +4,7 @@ const connectDB = require("./config/database");
 const UserModel = require("./models/user");
 
 app.use(express.json()); // Middleware to parse JSON bodies
+// Signup API - POST /signup - Create a new user
 app.post("/signup", async (req, res) => {
 
     console.log(req.body);
@@ -20,6 +21,54 @@ app.post("/signup", async (req, res) => {
         });
 
 });
+
+// Feed API - GET /feed - Fetch all users from the database
+app.get("/feed", async (req, res) => {
+    try {
+        const users = await UserModel.find({});
+        if (users.length === 0) {
+            return res.status(404).json({ message: "No users found" });
+        } else {
+            res.status(200).json(users);
+        }
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// Delete API - DELETE  - Delete a user by ID
+app.delete("/user", async (req, res) => {
+    const userId = req.body.userId;
+    try {
+        const user = await UserModel.findByIdAndDelete(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
+
+// Update API - PUT  - Update a user by ID
+app.put("/user", async (req, res) => {
+    const userId = req.body.userId;
+    const updateData = req.body
+    try {
+        const user = await UserModel.findByIdAndUpdate(userId, updateData);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        } else {
+            res.status(200).json({ message: "User updated successfully" });
+        }
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 
 connectDB().then(() => {
     app.listen(7777, (req, res) => {
