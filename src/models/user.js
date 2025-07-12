@@ -39,7 +39,8 @@ const userSchema = new mongoose.Schema({
     gender: {
         type: String,
         required: true,
-        enum: ['male', 'female', 'other'] // Restrict to allowed values
+        enum: ['Male', 'Female', 'Other'], // Restrict to allowed values
+        lowercase: true // Store
     },
     photoUrl: {
         type: String,
