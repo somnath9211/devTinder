@@ -2,78 +2,18 @@ const express = require("express");
 const app = express();
 const connectDB = require("./config/database");
 const UserModel = require("./models/user");
+const { validateUserInput } = require('./utils/userValidation');
 
 app.use(express.json()); // Middleware to parse JSON bodies
 // Signup API - POST /signup - Create a new user
 app.post("/signup", async (req, res) => {
-    const {
-        firstName,
-        lastName,
-        emailId,
-        password,
-        age,
-        gender,
-        photoUrl,
-        bio,
-        skills
-    } = req.body;
-
-    // Required fields check
-    if (!firstName || !emailId || !password || !age || !gender) {
-        return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // Field-specific validations
-    if (typeof firstName !== "string" || firstName.trim().length < 2 || firstName.trim().length > 50) {
-        return res.status(400).json({ message: "First name must be 2-50 characters" });
-    }
-
-    if (lastName && (typeof lastName !== "string" || lastName.trim().length > 50)) {
-        return res.status(400).json({ message: "Last name must be up to 50 characters" });
-    }
-
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(emailId)) {
-        return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    if (typeof password !== "string" || password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters long" });
-    }
-
-    if (typeof age !== "number" || age < 18 || age > 120) {
-        return res.status(400).json({ message: "Age must be between 18 and 120" });
-    }
-
-    if (!['male', 'female', 'other'].includes(gender)) {
-        return res.status(400).json({ message: "Gender must be 'male', 'female', or 'other'" });
-    }
-
-    if (skills) {
-        if (!Array.isArray(skills)) {
-            return res.status(400).json({ message: "Skills must be an array" });
-        }
-        if (skills.length > 20) {
-            return res.status(400).json({ message: "Maximum 20 skills allowed" });
-        }
-    }
-
-    if (bio && (typeof bio !== "string" || bio.length > 500)) {
-        return res.status(400).json({ message: "Bio must be up to 500 characters" });
-    }
-
-    if (photoUrl && typeof photoUrl !== "string") {
-        return res.status(400).json({ message: "Photo URL must be a string" });
-    }
-
-    // Prevent extra/unexpected fields
-    const allowedFields = ['firstName', 'lastName', 'emailId', 'password', 'age', 'gender', 'photoUrl', 'bio', 'skills'];
-    const extraFields = Object.keys(req.body).filter(key => !allowedFields.includes(key));
-    if (extraFields.length > 0) {
-        return res.status(400).json({ message: `Unexpected fields: ${extraFields.join(', ')}` });
-    }
-
     try {
+        const validation = validateUserInput(req.body, false);
+        if (!validation.valid) {
+            return res.status(400).json({ message: validation.message });
+        }
+
+
         // Creating a new user instance
         const user = new UserModel(req.body);
         await user.save();
@@ -119,46 +59,11 @@ app.put("/user", async (req, res) => {
     const userId = req.body.userId;
     const updateData = req.body;
 
-    // Allowed fields for update
-    const allowedUpdates = ['firstName', 'lastName', 'emailId', 'password', 'age', 'skills', 'bio', 'photoUrl', 'gender'];
-    const updateFields = Object.keys(updateData).filter(key => key !== 'userId');
-
-    // Check for invalid fields
-    const isValidUpdate = updateFields.every((key) => allowedUpdates.includes(key));
-    if (!isValidUpdate) {
-        return res.status(400).json({ message: "Invalid update fields" });
-    }
-
-    // Field-specific validations
-    if (updateData.skills) {
-        if (!Array.isArray(updateData.skills)) {
-            return res.status(400).json({ message: "Skills must be an array" });
-        }
-        if (updateData.skills.length > 20) {
-            return res.status(400).json({ message: "Maximum 20 skills allowed" });
-        }
-    }
-
-    if (updateData.emailId) {
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(updateData.emailId)) {
-            return res.status(400).json({ message: "Invalid email format" });
-        }
-    }
-
-    if (updateData.password && updateData.password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters long" });
-    }
-
-    if (updateData.age && (updateData.age < 18 || updateData.age > 120)) {
-        return res.status(400).json({ message: "Age must be between 18 and 120" });
-    }
-
-    if (updateData.gender && !['male', 'female', 'other'].includes(updateData.gender)) {
-        return res.status(400).json({ message: "Gender must be 'male', 'female', or 'other'" });
-    }
-
     try {
+        const validation = validateUserInput(req.body, true);
+        if (!validation.valid) {
+            return res.status(400).json({ message: validation.message });
+        }
         const user = await UserModel.findByIdAndUpdate(userId, updateData, { new: true, runValidators: true });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
