@@ -3,6 +3,7 @@ const app = express();
 const connectDB = require("./config/database");
 const UserModel = require("./models/user");
 const { validateUserInput } = require('./utils/userValidation');
+const bcrypt = require('bcrypt');
 
 app.use(express.json()); // Middleware to parse JSON bodies
 // Signup API - POST /signup - Create a new user
@@ -12,10 +13,24 @@ app.post("/signup", async (req, res) => {
         if (!validation.valid) {
             return res.status(400).json({ message: validation.message });
         }
+        const { firstName, lastName, emailId, password, age, gender } = req.body;
 
+        const passwordHash = await bcrypt.hash(password, 10);
 
+        // Check if user already exists
+        const existingUser = await UserModel.findOne({ emailId });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
         // Creating a new user instance
-        const user = new UserModel(req.body);
+        const user = new UserModel({
+            firstName: firstName.trim(),
+            lastName: lastName ? lastName.trim() : "",
+            emailId: emailId.trim().toLowerCase(),
+            password: passwordHash,
+            age: age,
+            gender: gender,
+        });
         await user.save();
         res.status(201).json({ message: "User created successfully" });
     } catch (error) {
@@ -23,6 +38,39 @@ app.post("/signup", async (req, res) => {
         res.status(500).json({ message: error.message || "Internal server error" });
     }
 });
+
+// Login API - POST /login - Authenticate a user
+app.post("/loging", async (req, res) => {
+    const { emailId, password } = req.body;
+
+    // Basic input validation
+    if (!emailId || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    try {
+        // Find user by email
+        const user = await UserModel.findOne({ emailId: emailId.trim().toLowerCase() }).select('+password');
+        if (!user) {
+            return res.status(404).json({ message: "Invalid email or password" });
+        }
+
+        // Compare password with hashed password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        // Remove password from response
+        const userObj = user.toObject();
+        delete userObj.password;
+
+        res.status(200).json({ message: "Login successful", user: userObj });
+    } catch (error) {
+        console.error("Error during login:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
 
 // Feed API - GET /feed - Fetch all users from the database
 app.get("/feed", async (req, res) => {
