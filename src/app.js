@@ -6,6 +6,7 @@ const { validateUserInput } = require('./utils/userValidation');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const userAuth = require("./middlewares/auth");
 
 app.use(cookieParser()); // Middleware to parse cookies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
@@ -61,12 +62,11 @@ app.post("/loging", async (req, res) => {
         }
 
         // Compare password with hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await user.validatePassword(password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid email or password" });
         } else {
-            // Generate JWT token
-            const token = jwt.sign({ userId: user._id }, "Somnath9211@", { expiresIn: '1h' });
+            const token = await user.getJWT();
             // Set token in cookie
             res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'Strict' });
         }
@@ -134,20 +134,18 @@ app.put("/user", async (req, res) => {
 });
 
 // Profile API - GET /profile - Fetch user profile by ID
-app.get("/profile", async (req, res) => {
-    const cookieToken = req.cookies.token;
+app.get("/profile", userAuth, async (req, res) => {
+
     try {
-        const decodedToken = jwt.verify(cookieToken, "Somnath9211@");
-        const userId = decodedToken.userId;
-        console.log("User ID from token:", userId);
-        const user = await UserModel.findById(userId);
+        // Fetch the user from the database using the ID from req.user
+        const user = req.user; // The user is already attached to the request object by the userAuth middleware
         if (!user) {
             return res.status(404).json({ message: "User not found" });
-        } else {
-            const userObj = user.toObject();
-            delete userObj.password;
-            res.status(200).json(userObj);
-        };
+        }
+        const userObj = user.toObject();
+        delete userObj.password;
+        res.status(200).json(userObj);
+
     } catch (error) {
         console.error("Error fetching user profile:", error);
         res.status(500).json({ message: "Internal server error" });

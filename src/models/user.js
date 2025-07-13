@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
     firstName: {
@@ -97,6 +99,24 @@ const userSchema = new mongoose.Schema({
         ]
     }
 }, { timestamps: true });
+
+userSchema.methods.getJWT = async function () {
+    const user = this;
+    if (!user._id) {
+        throw new Error("User ID is required to generate JWT");
+    }
+    const token = jwt.sign({ userId: user._id }, "Somnath9211@", { expiresIn: '1h' });
+    return token;
+};
+
+userSchema.methods.validatePassword = async function (password) {
+    const user = this;
+    if (!user.password) {
+        throw new Error("Password is required for validation");
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    return isMatch;
+};
 
 const UserModel = mongoose.model('User', userSchema);
 
