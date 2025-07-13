@@ -4,8 +4,13 @@ const connectDB = require("./config/database");
 const UserModel = require("./models/user");
 const { validateUserInput } = require('./utils/userValidation');
 const bcrypt = require('bcrypt');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
+app.use(cookieParser()); // Middleware to parse cookies
+app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 app.use(express.json()); // Middleware to parse JSON bodies
+
 // Signup API - POST /signup - Create a new user
 app.post("/signup", async (req, res) => {
     try {
@@ -59,6 +64,11 @@ app.post("/loging", async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid email or password" });
+        } else {
+            // Generate JWT token
+            const token = jwt.sign({ userId: user._id }, "Somnath9211@", { expiresIn: '1h' });
+            // Set token in cookie
+            res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'Strict' });
         }
 
         // Remove password from response
@@ -122,6 +132,27 @@ app.put("/user", async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+// Profile API - GET /profile - Fetch user profile by ID
+app.get("/profile", async (req, res) => {
+    const cookieToken = req.cookies.token;
+    try {
+        const decodedToken = jwt.verify(cookieToken, "Somnath9211@");
+        const userId = decodedToken.userId;
+        console.log("User ID from token:", userId);
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        } else {
+            const userObj = user.toObject();
+            delete userObj.password;
+            res.status(200).json(userObj);
+        };
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
 
 
 connectDB().then(() => {
