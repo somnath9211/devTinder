@@ -6,7 +6,7 @@ const userAuth = require("../middlewares/auth");
 const profileRouter = express.Router();
 
 // Profile API - GET /profile - Fetch user profile by ID
-profileRouter.get("/profile", userAuth, async (req, res) => {
+profileRouter.get("/profile/view", userAuth, async (req, res) => {
 
     try {
         // Fetch the user from the database using the ID from req.user
@@ -25,7 +25,7 @@ profileRouter.get("/profile", userAuth, async (req, res) => {
 });
 
 // Delete API - DELETE  - Delete a user by ID
-profileRouter.delete("/user", async (req, res) => {
+profileRouter.delete("/profile/delete", userAuth, async (req, res) => {
     const userId = req.body.userId;
     try {
         const user = await UserModel.findByIdAndDelete(userId);
@@ -40,7 +40,7 @@ profileRouter.delete("/user", async (req, res) => {
 })
 
 // Update API - PUT  - Update a user by ID
-profileRouter.put("/user", async (req, res) => {
+profileRouter.put("/profile/edit", userAuth, async (req, res) => {
     const userId = req.body.userId;
     const updateData = req.body;
 
