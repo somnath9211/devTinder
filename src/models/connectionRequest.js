@@ -1,27 +1,36 @@
 const mongoose = require('mongoose');
 
 const connectionRequestSchema = new mongoose.Schema({
-    sender: {
+    senderId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    receiver: {
+    receiverId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'rejected', 'ignored'],
-        default: 'pending'
+        enum: {
+            values: ['interested', 'accepted', 'rejected', 'ignored'],
+            message: 'Status must be one of the following: pending, accepted, rejected, ignored'
+        },
+        default: 'pending', // <-- Move default inside status field
+        required: true
     },
     createdAt: {
         type: Date,
         default: Date.now
     }
-});
 
-const ConnectionRequest = mongoose.model('ConnectionRequest', connectionRequestSchema);
+},
+    {
+        timestamps: true
+    }
+);
 
-module.exports = ConnectionRequest;
+const ConnectionRequestModel = new mongoose.model('ConnectionRequest', connectionRequestSchema);
+
+module.exports = ConnectionRequestModel;

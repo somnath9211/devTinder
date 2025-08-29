@@ -18,7 +18,7 @@ authRouter.post("/signup", async (req, res) => {
         if (!validation.valid) {
             return res.status(400).json({ message: validation.message });
         }
-        const { firstName, lastName, emailId, password, age, gender } = req.body;
+        const { firstName, lastName, emailId, password, age, gender, skills } = req.body;
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -35,6 +35,7 @@ authRouter.post("/signup", async (req, res) => {
             password: passwordHash,
             age: age,
             gender: gender,
+            skills: skills
         });
         await user.save();
         res.status(201).json({ message: "User created successfully" });
