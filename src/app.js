@@ -12,10 +12,12 @@ app.use(express.json()); // Middleware to parse JSON bodies
 const authRouter = require("./routes/auth");
 const requestRouter = require("./routes/request");
 const profileRouter = require("./routes/profile");
+const userRouter = require("./routes/user");
 
 app.use("/", authRouter); // Mount auth routes
 app.use("/", requestRouter); // Mount request routes
 app.use("/", profileRouter); // Mount profile routes
+app.use("/", userRouter); // Mount user routes
 
 
 

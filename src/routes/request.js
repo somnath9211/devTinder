@@ -5,6 +5,8 @@ const UserModel = require('../models/user.js');
 
 const requestRouter = express.Router();
 
+// Send a connection request - Interested or Not Ignored
+
 requestRouter.post(
     '/sendConnectionRequest/send/:senderId',
     userAuth,
@@ -55,6 +57,38 @@ requestRouter.post(
         }
     }
 );
+
+// Accept or Reject a connection request
+requestRouter.post(
+    '/respondToConnectionRequest/respond/:status/:requestId',
+    userAuth, async (req, res) => {
+        try {
+            const loggedInUserId = req.user;
+            const { status, requestId } = req.params;
+            const validStatuses = ["accepted", "rejected"];
+            if (!validStatuses.includes(status)) {
+                return res.status(400).json({ message: "Invalid status. Must be 'accepted' or 'rejected'" });
+            };
+
+            // Find the connection request in the database
+            const connectionRequest = await ConnectionRequestModel.findOne({
+                _id: requestId,
+                receiverId: loggedInUserId._id,
+                status: "interested"
+            });
+            if (!connectionRequest) {
+                return res.status(404).json({ message: "Connection request not found or already responded to" });
+            };
+            // Update the status of the connection request
+            connectionRequest.status = status;
+            await connectionRequest.save();
+
+            res.status(200).json({ message: `Connection request ${status} successfully`, data: connectionRequest });
+        } catch (error) {
+            console.error("Error in respondToConnectionRequest:", error);
+            res.status(500).json({ message: "Something went wrong", error: error.message });
+        }
+    });
 
 
 module.exports = requestRouter;
