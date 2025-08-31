@@ -1,6 +1,7 @@
 const express = require('express');
 const userAuth = require("../middlewares/auth.js");
 const ConnectionRequestModel = require('../models/connectionRequest');
+const UserModel = require('../models/user.js');
 const userRouter = express.Router();
 
 // Get all connection requests for the logged-in user
@@ -48,5 +49,44 @@ userRouter.get('/user/conncetions', userAuth, async (req, res) => {
         res.status(500).json({ message: "Something went wrong", error: error.message });
     }
 });
+
+// feed of users
+
+userRouter.get('/feed', userAuth, async (req, res) => {
+    try {
+        const loggedInUserId = req.user;
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+        limit = limit > 50 ? 50 : limit;
+        let skip = (page - 1) * limit;
+
+        const connections = await ConnectionRequestModel.find({
+            $or: [
+                { senderId: loggedInUserId._id },
+                { receiverId: loggedInUserId._id }
+            ]
+        }).select('senderId receiverId status');
+
+        // Hide the allredy send or recieved connection request
+        const connectedUserIds = new Set();
+        connections.forEach(conn => {
+            connectedUserIds.add(conn.senderId.toString());
+            connectedUserIds.add(conn.receiverId.toString());
+        });
+
+        console.log(connectedUserIds);
+
+        // Exclude all the connected users and send requests users
+
+        const allUsers = await UserModel.find({ _id: { $ne: loggedInUserId._id } }).select('firstName lastName photoUrl bio skills');
+        const filteredUsers = allUsers.filter(user => !connectedUserIds.has(user._id.toString()))
+        console.log(filteredUsers);
+
+
+        res.status(200).json(filteredUsers);
+    } catch (error) {
+        res.status(500).json({ message: "Something went wrong", error: error.message });
+    }
+})
 
 module.exports = userRouter;
